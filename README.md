@@ -1,16 +1,5 @@
 # Predict-Dropout
 
-Two machine-learning projects.
-
-| | Project | Data | Model |
-|---|---|---|---|
-| 🎓 | [Course-dropout prediction](#-course-dropout-prediction) | 63,464 enrollments | XGBoost |
-| 🦌 | [Camera-trap species detection](#-camera-trap-species-detection) | 2,500 labelled crops + 2,423 field frames | YOLO + MegaDetector |
-
----
-
-## 🎓 Course-dropout prediction
-
 **Can we flag which enrollments will drop a course, early enough to intervene?**
 
 ```mermaid
@@ -38,25 +27,9 @@ pie showData
     "missed" : 866
 ```
 
-Of the enrollments it flags, 82% really do drop. The strongest predictors are a previous dropout, origin country, and open support tickets.
+Of the enrollments it flags, 82% really do drop. The strongest predictors are a previous dropout, open support tickets, and origin country. Origin country partly stands in for client industry, because Portuguese clients skew toward Big Tech and IT.
 
 📄 Details: [`extra/EXECUTIVE_SUMMARY.md`](extra/EXECUTIVE_SUMMARY.md)
 
 ---
-
-## 🦌 Camera-trap species detection
-
-**Which animals pass the camera traps, and do jackals outnumber gazelles?**
-
-![one example per species](assets/species.jpg)
-
-```mermaid
-flowchart LR
-    A[📷 Field frames] --> B[MegaDetector<br/>finds animals] --> C[YOLO classifier<br/>8 species] --> D{Confident?}
-    D -- yes --> E[Species count]
-    D -- no --> F[uncertain]
-```
-
-The model gets 96.6% of test images right and never confuses gazelle with jackal. In the May 2022 field data, jackal (18 crops) outnumbers gazelle (13).
-
-📓 Notebook: [`Yotam_Eviatar_final_assignment.ipynb`](Yotam_Eviatar_final_assignment.ipynb) · 🧹 Clean version: [Detect-Species](https://github.com/YotamEviatar-stu/Detect-Species)
+<sub>The camera-trap notebook in this repo has its own clean version: [Detect-Species](https://github.com/YotamEviatar-stu/Detect-Species).</sub>
