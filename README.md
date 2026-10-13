@@ -1,62 +1,51 @@
 # Predict-Dropout
 
-**Which course enrollments will be dropped, and can we flag them early enough to call the client first?**
+## Background
+
+We were asked to train and validate a model that predicts which B2B course enrollments will be **dropped**, so the client can be contacted before they cancel. The data covers 63,464 past enrollments with 29 columns each; 41% of them dropped.
+
+## How it works
 
 ```mermaid
 flowchart LR
-    A[📋 63,462 enrollments<br/>41% dropped] --> B[Clean<br/>messy text, fake numbers,<br/>leaky columns]
+    A[📋 63,462 enrollments] --> B[Clean<br/>messy text, fake numbers,<br/>leaky columns]
     B --> C[156 features]
-    C --> D[Tune 3 models<br/>5-fold CV]
-    D --> E[Test once on<br/>12,693 held-out rows]
-    E --> F[🎯 Drop probability<br/>for each new enrollment]
+    C --> D{80 / 20 split}
+    D -- 80% --> E[Train & tune 3 models<br/>5-fold cross-validation]
+    D -- 20% --> F[🔒 Holdout<br/>12,693 rows, used once]
+    E --> G[Evaluate on holdout]
+    F --> G
+    G --> H[🎯 Best model scores<br/>new enrollments]
 ```
 
-## What predicts a dropout
+## Model performance
 
-![drop rate by payment terms, prior dropout, support ticket, returning client](assets/drivers.png)
+Three models were compared: logistic regression, random forest and XGBoost.
 
-## Three problems the pipeline handles
+![AUC, recall and precision per model](assets/model_comparison.png)
 
-**1. Messy text.** Category values were typed by hand, so one client type appears in 141 different spellings. Upper-casing and stripping symbols collapses them.
+**Does it generalise?** Cross-validation and holdout scores match, so the score holds up on data the model never saw. The tree models fit their training folds more closely, but that doesn't cost them on new data.
 
-![141 spellings of one category collapse to one](assets/messy_text.png)
+![ROC-AUC on train folds, cross-validation and holdout](assets/generalisation.png)
 
-**2. Fake numbers.** Some values are impossible, such as 9,999 students or −5 practical hours. They mark missing data, so they're treated as missing and filled with the median.
+<table>
+<tr>
+<td><img src="assets/roc.png" alt="ROC curves" width="380"></td>
+<td><img src="assets/confusion_matrix.png" alt="XGBoost confusion matrix" width="360"></td>
+</tr>
+<tr>
+<td align="center">Every model ranks dropouts far above chance</td>
+<td align="center">XGBoost catches 83% of dropouts; 89% of its flags are right</td>
+</tr>
+</table>
 
-**3. Columns that leak the answer.** Only data known at sign-up can be used. Some columns are filled in only after the client shows up, which gives the answer away.
+**Chosen model: XGBoost.** It has the highest AUC (0.957) and recall (0.83). Recall matters most here: a missed dropout means nobody calls the client, while a false alarm only costs one unnecessary call.
 
-```mermaid
-flowchart LR
-    A[Sign-up<br/>payment terms, history,<br/>country, agent] -->|✅ used| M[Model]
-    B[Course starts<br/>course kit shipped,<br/>lab assigned] -.->|❌ dropped: leaks the answer| M
-```
+## What the model looks at
 
-## Results
+![top features by SHAP](assets/shap.png)
 
-**Which model is best?** Holdout AUC (1.0 = perfect ranking):
-
-```mermaid
-xychart-beta
-    x-axis ["Logistic Regression", "Random Forest", "XGBoost"]
-    y-axis "Holdout AUC" 0.85 --> 1.0
-    bar [0.909, 0.955, 0.957]
-```
-
-**XGBoost on the 5,260 real dropouts in the holdout:**
-
-```mermaid
-pie showData
-    "caught" : 4383
-    "missed" : 877
-```
-
-When it flags an enrollment, it's right 89% of the time (562 false alarms).
-
-**What the model looks at:**
-
-![top SHAP features](assets/shap.png)
-
-Origin country PRT ranks high partly because it stands in for client type. Clients from PRT are mostly Big Tech and IT (66%), while other clients are mostly SaaS (66%).
+Origin country PRT ranks high partly because it stands in for client type: PRT clients are mostly Big Tech and IT (66%), while other clients are mostly SaaS (66%).
 
 ---
-Code: [`pipeline.py`](pipeline.py), five steps that read top to bottom. Run it with `pip install -r requirements.txt && python pipeline.py`. The data is in [`data/`](data/).
+Code: [`pipeline.py`](pipeline.py), five annotated steps covering cleaning, features, training, evaluation and scoring. Run it with `pip install -r requirements.txt && python pipeline.py`; the data is in [`data/`](data/).
